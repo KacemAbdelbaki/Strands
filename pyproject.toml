@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strands-assistant"
+version = "0.1.0"
+description = "Personal assistant: Strands Agent wrapped in an MCP server"
+requires-python = ">=3.11"
+dependencies = [
+    # Agent framework — all three free model providers
+    "strands-agents[litellm,ollama,gemini]",
+    # Built-in tools (current_time, file_read, file_write, etc.)
+    "strands-agents-tools",
+    # MCP server (official SDK, includes FastMCP)
+    "mcp[cli]",
+    "fastmcp",
+    # Memory — self-hosted, full config control
+    "mem0ai",
+    "chromadb",
+    # Web search
+    "tavily-python",
+    # Env loading
+    "python-dotenv",
+    "pyautogui",
+]

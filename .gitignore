@@ -1,0 +1,34 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.eggs/
+
+# Memory database (ChromaDB persistent storage)
+memory_db/
+
+# Mem0 default cache
+.mem0/
+
+# Notes (user content, not tracked)
+notes/*.md
+!notes/.gitkeep
+
+# Google OAuth credentials
+credentials/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
