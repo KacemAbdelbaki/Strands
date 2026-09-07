@@ -5,3 +5,4 @@ User asked what show they are watching, screenshot taken to analyze.
 The user asked 'what am i looking at' while looking at their desktop, which shows a terminal/code environment.
 Update the 'notes' feature and perform an overhaul on it.
 Add a tool to allow sending emails.
+eat ur vegetables

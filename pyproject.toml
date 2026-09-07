@@ -12,9 +12,6 @@ dependencies = [
     "strands-agents[litellm,ollama,gemini]",
     # Built-in tools (current_time, file_read, file_write, etc.)
     "strands-agents-tools",
-    # MCP server (official SDK, includes FastMCP)
-    "mcp[cli]",
-    "fastmcp",
     # Memory — self-hosted, full config control
     "mem0ai",
     "chromadb",
@@ -23,4 +20,16 @@ dependencies = [
     # Env loading
     "python-dotenv",
     "pyautogui",
+    # Web UI
+    "fastapi",
+    "uvicorn",
+    # Scraping
+    "requests",
+    "beautifulsoup4",
+    "markdownify",
+    # LinkedIn job search
+    "python-jobspy",
+    # Browser automation (Playwright fallback for JS-rendered pages)
+    "playwright",
+    "playwright-stealth",
 ]

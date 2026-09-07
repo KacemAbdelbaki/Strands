@@ -20,6 +20,8 @@ from tools.memory_tools import remember, recall, list_memories
 from tools.notes_tools import take_note, get_notes
 from tools.system_tools import terminal_exec, take_screenshot
 from tools.email_tools import get_emails
+from tools.scraping_tools import scrape_webpage
+from tools.linkedin_tools import search_pfe_jobs
 
 load_dotenv()
 
@@ -50,6 +52,8 @@ def create_agent() -> Agent:
             terminal_exec,
             take_screenshot,
             get_emails,
+            scrape_webpage,
+            search_pfe_jobs,
         ],
     )
 
