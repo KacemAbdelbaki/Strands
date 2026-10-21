@@ -4,7 +4,6 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
@@ -27,10 +26,4 @@ def gmail_get_service():
     with open("./credentials/gmail_token.json", "w") as token:
       token.write(creds.to_json())
 
-  try:   
-    service = build("gmail", "v1", credentials=creds)
-    return service
-
-  except HttpError as error:
-    # TODO(developer) - Handle errors from gmail API.
-    print(f"An error occurred: {error}")
+  return build("gmail", "v1", credentials=creds)

@@ -32,3 +32,6 @@ credentials/
 # OS
 Thumbs.db
 .DS_Store
+
+# To Fix
+to_fix.md

@@ -17,12 +17,11 @@ dependencies = [
     "chromadb",
     # Web search
     "tavily-python",
+    # Gmail + Google Calendar
+    "google-api-python-client",
+    "google-auth-oauthlib",
     # Env loading
     "python-dotenv",
-    "pyautogui",
-    # Web UI
-    "fastapi",
-    "uvicorn",
     # Scraping
     "requests",
     "beautifulsoup4",

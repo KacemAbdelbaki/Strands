@@ -1,299 +1,118 @@
-# Strands Personal Assistant — MCP Server
+# Strands Personal Assistant
 
-A personal-assistant system built with [Strands Agents](https://strandsagents.com) (Python), wrapped in an MCP server via [FastMCP](https://github.com/modelcontextprotocol/python-sdk). Callable from Claude Desktop, Claude Code, MCP Inspector, or any MCP client.
+A personal assistant you chat with in the terminal, built with [Strands Agents](https://strandsagents.com) (Python).
+It runs on free-tier models (Gemini, Groq) with a local Ollama fallback.
 
-**Free models only** — no paid API keys required for base operation.
+## What it can do
 
----
+| Area | Tools |
+|------|-------|
+| Memory | `remember`, `recall`, `list_memories` (Mem0 + ChromaDB) |
+| Notes | `take_note`, `get_notes` (saved to `notes/note.txt`) |
+| Google Calendar | `get_events`, `create_event` |
+| Terminal | `terminal_exec` (runs shell commands on your machine) |
+| Research | `research`: a separate agent with web search (Tavily) and read-only Gmail |
+| Time | `current_time` |
 
-## Features
+`create_event` and `terminal_exec` ask for confirmation (`[y/N]`) before they run.
 
-| Phase | Capability | Status |
-|-------|-----------|--------|
-| 1 | Current time, persistent memory, web search | ✅ |
-| 2 | Google Calendar (via MCP) | 🔲 |
-| 3 | Gmail read-only (via MCP) | 🔲 |
-| 4 | File-based notes | 🔲 |
+## How it works
 
----
-
-## Prerequisites
-
-- **Python 3.11+**
-- **Node.js + npm** — needed for `npx` MCP servers (Phases 2-3) and MCP Inspector
-- **Ollama** — **required** regardless of model provider (memory always runs locally)
-  - Install: <https://ollama.com/download>
-  - Ensure `ollama serve` is running
-- **Docker** (optional, for containerized deployment)
-
-### Pull Required Ollama Models
-
-```bash
-# Required — memory (fact extraction + embeddings)
-ollama pull llama3.2:3b
-ollama pull nomic-embed-text
-
-# Optional — only if MODEL_PROVIDER=ollama
-ollama pull qwen3:8b
+```
+You (terminal)
+  │
+  ▼
+Assistant agent    memory, notes, calendar, terminal, time
+  │
+  └── research ──► Researcher agent    web search, Gmail (read-only)
 ```
 
----
+The Researcher starts fresh on every call and never sees your conversation. Email and web content stay
+with an agent that cannot run commands; the Assistant only gets the Researcher's summary.
 
-## Quick Start
+Each agent has a model fallback chain: if one provider fails or hits a rate limit, the next one takes over.
 
-### 1. Install Dependencies
+## Setup
+
+### 1. Install
+
+Requires Python 3.11+.
 
 ```bash
-cd d:\project\Strands
+python -m venv .venv
+.venv\Scripts\activate
 pip install -e .
 ```
 
-### 2. Configure Environment
+### 2. Create a `.env` file
 
-```bash
-cp .env.example .env
+```env
+GEMINI_API_KEY=...        # https://aistudio.google.com (free)
+GROQ_API_KEY=...          # https://console.groq.com (free tier)
+TAVILY_API_KEY=...        # https://tavily.com (free tier, web search)
 ```
 
-Edit `.env` and set your chosen model provider + keys:
+Optional settings:
 
-| `MODEL_PROVIDER` | Required Key | Where to Get It |
-|-------------------|-------------|-----------------|
-| `groq` (default) | `GROQ_API_KEY` | <https://console.groq.com> (free tier) |
-| `gemini` | `GEMINI_API_KEY` | <https://aistudio.google.com> (free, no card) |
-| `ollama` | None | Just run `ollama serve` |
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `MODEL_PRIORITY` | `gemini,groq,ollama` | Assistant model fallback order |
+| `RESEARCHER_MODEL_PRIORITY` | `groq,gemini,ollama` | Researcher model fallback order |
+| `MEMORY_PROVIDER` | `cloud` | `cloud` (Gemini) or `ollama` (fully local) |
+| `MEM0_API_KEY` | none | Use the hosted Mem0 platform instead of local ChromaDB |
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama server address |
+| `TERMINAL_TIMEOUT` | `60` | Seconds before a terminal command is killed |
+| `BYPASS_TOOL_CONSENT` | not set | Set to `true` to skip the confirmation prompts (not recommended) |
 
-Also set `TAVILY_API_KEY` for web search — get a free key at <https://tavily.com> (1,000 searches/month).
+Providers with no API key are skipped. Ollama is optional: to use it, run `ollama serve` and
+`ollama pull qwen3:8b`. For local memory you also need `llama3.2:3b` and `nomic-embed-text`.
 
-### 3. Ensure Ollama Is Running
+### 3. Google sign-in (Gmail and Calendar)
 
-```bash
-ollama serve
-```
+1. In [Google Cloud Console](https://console.cloud.google.com), enable the **Gmail API** and the
+   **Google Calendar API**. Each one must be enabled in the project that owns its credentials file.
+2. Create an OAuth client of type **Desktop app**, download its JSON, and save it as:
+   - `credentials/gmail_credentials.json` for Gmail
+   - `credentials/calendar_credentials.json` for Calendar
+3. If the app is in "Testing" mode, add your Google account as a test user on the OAuth consent screen.
 
-Memory depends on Ollama regardless of your chosen model provider.
+The first time a Gmail or Calendar tool runs, a browser window opens so you can sign in. The resulting
+tokens (`gmail_token.json`, `calendar_token.json`) are saved in `credentials/`. To sign in again, delete
+the token file. The `credentials/` folder is gitignored.
 
-### 4. Test Standalone (Optional)
+## Run
 
 ```bash
 python agent.py
 ```
 
-This starts an interactive REPL. Type messages and verify the agent responds.
+Then type your message, for example "what's on my calendar this week?" Press Ctrl+C to quit.
 
-### 5. Run the MCP Server
-
-#### stdio transport (local, for Claude Desktop/Code)
-
-```bash
-python server.py
-```
-
-#### streamable-http transport (remote/container)
-
-```bash
-set TRANSPORT=http
-python server.py
-# Server starts on http://0.0.0.0:8000
-```
-
-### 6. Test with MCP Inspector
-
-```bash
-npx @modelcontextprotocol/inspector python server.py
-```
-
-In the Inspector UI:
-1. Call `ask_assistant` with `message: "What time is it?"`
-2. Call `ask_assistant` with `message: "My favorite programming language is Python. Remember that."`
-3. **Restart the server** (Ctrl+C, re-run)
-4. Call `ask_assistant` with `message: "What's my favorite programming language?"`
-   → Should recall "Python" from memory
-5. Call `ask_assistant` with `message: "Search the web for the latest AI agent news"`
-   → Should return real results from Tavily
-
----
-
-## Claude Desktop Configuration
-
-Add to your `claude_desktop_config.json`:
-
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "strands-assistant": {
-      "command": "python",
-      "args": ["d:\\project\\Strands\\server.py"],
-      "env": {
-        "MODEL_PROVIDER": "groq",
-        "GROQ_API_KEY": "gsk_...",
-        "TAVILY_API_KEY": "tvly-..."
-      }
-    }
-  }
-}
-```
-
----
-
-## Claude Code Configuration
-
-```bash
-claude mcp add strands-assistant python d:\project\Strands\server.py
-```
-
-Or add to `.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "strands-assistant": {
-      "command": "python",
-      "args": ["d:\\project\\Strands\\server.py"]
-    }
-  }
-}
-```
-
----
-
-## Docker Deployment
-
-```bash
-# Build
-docker build -t strands-assistant .
-
-# Run (streamable-http, default)
-docker run --env-file .env \
-  -p 8000:8000 \
-  -v ./memory_db:/app/memory_db \
-  -v ./notes:/app/notes \
-  strands-assistant
-
-# Connect MCP Inspector to the container
-npx @modelcontextprotocol/inspector --url http://localhost:8000/mcp
-```
-
-> **Note:** The container defaults to `TRANSPORT=http`. For Ollama access from inside Docker, set `OLLAMA_HOST=http://host.docker.internal:11434` in your `.env`.
-
----
-
-## Model Providers
-
-### Groq (Default — Free Tier)
-
-- Model: `openai/gpt-oss-120b` (117B MoE, strong tool-calling)
-- Free tier at <https://console.groq.com>
-- Set `GROQ_API_KEY` in `.env`
-
-### Gemini (Free, No Card)
-
-- Model: `gemini-2.5-flash`
-- Free key at <https://aistudio.google.com>
-- Set `GEMINI_API_KEY` in `.env`
-- Daily quota varies — check current limits in AI Studio
-
-### Ollama (Fully Local)
-
-- Model: `qwen3:8b` (~8GB VRAM/RAM)
-- No API key needed
-- Run `ollama pull qwen3:8b` then `ollama serve`
-
-### Memory (Configurable via `MEMORY_PROVIDER`)
-
-Memory operations (fact extraction and embeddings) can run entirely in the cloud or locally, configurable via the `MEMORY_PROVIDER` env var in `.env`.
-
-#### `MEMORY_PROVIDER=cloud` (Default)
-- **LLM** (fact extraction): Groq `llama-3.1-8b-instant` (uses `GROQ_API_KEY`)
-- **Embeddings**: Gemini `models/text-embedding-004` (uses `GEMINI_API_KEY`)
-- **Vector store**: ChromaDB `PersistentClient` at `./memory_db/`
-
-#### `MEMORY_PROVIDER=ollama` (Fully Local)
-- **LLM** (fact extraction): `llama3.2:3b`
-- **Embeddings**: `nomic-embed-text`
-- **Vector store**: ChromaDB `PersistentClient` at `./memory_db/`
-- Requires pulling models: `ollama pull llama3.2:3b` and `ollama pull nomic-embed-text`
-
----
-
-## Architecture
-
-```
-MCP Client (Claude Desktop/Code/Inspector)
-    │
-    │ stdio or streamable-http
-    ▼
-server.py (FastMCP)
-    │ ask_assistant tool
-    ▼
-agent.py (Strands Agent)
-    ├── Model: Groq / Gemini / Ollama (configurable)
-    ├── current_time
-    ├── tavily_search (web)
-    ├── remember / recall / list_memories (Mem0 + ChromaDB)
-    ├── [Phase 2] MCPClient → Google Calendar
-    ├── [Phase 3] MCPClient → Gmail (read-only)
-    └── [Phase 4] file_read / file_write → ./notes/
-```
-
----
-
-## Project Structure
+## Project structure
 
 ```
 Strands/
-├── agent.py           # Strands Agent: model factory + tools
-├── server.py          # FastMCP server wrapping the agent
-├── pyproject.toml     # Dependencies
-├── Dockerfile         # Container build
-├── README.md          # This file
-├── .env.example       # Template for secrets
-├── .gitignore
-├── memory_db/         # ChromaDB storage (auto-created, gitignored)
-└── notes/             # Phase 4: markdown notes
-    └── .gitkeep
+├── agent.py            # Builds the Assistant and Researcher agents, runs the chat loop
+├── prompts.py          # System prompts
+├── logic/
+│   ├── models.py       # Model fallback chain (Gemini / Groq / Ollama)
+│   ├── memory.py       # Mem0 setup
+│   ├── gmail.py        # Gmail OAuth
+│   └── gcalendar.py    # Calendar OAuth
+├── tools/              # Tools the agents can call
+├── credentials/        # OAuth client files and tokens (gitignored)
+├── notes/              # Notes
+└── memory_db/          # Local memory store (gitignored)
 ```
-
----
-
-## Phase 2 — Google Calendar (Coming Next)
-
-> Requires Google Cloud OAuth setup. Full walkthrough will be added here when Phase 2 is implemented.
-
-## Phase 3 — Gmail Read-Only (Coming Next)
-
-> Read/search only. Send capability disabled by default for safety.
-> Requires `gmail.readonly` OAuth scope.
-> Instructions for widening scope to allow sending will be documented here.
-
----
-
-## Safety
-
-- `BYPASS_TOOL_CONSENT` is **not set** — the agent will prompt for confirmation on writes/sends/deletes
-- Real credentials are never committed — use `.env` (gitignored) with `.env.example` as template
-- Memory data stays local in `./memory_db/` (ChromaDB) — no data sent to external memory services
-- Gmail configured read-only by default (Phase 3)
-
----
 
 ## Troubleshooting
 
-### "Ollama connection refused"
-Ensure Ollama is running: `ollama serve`
+- **"Google Calendar API has not been used in project …"**: the API isn't enabled in the project that
+  owns `calendar_credentials.json`. Enable it in the project named in the error. Changes can take a few
+  minutes to apply.
+- **"Authorisation has expired or was revoked"**: delete the matching token in `credentials/` and run again.
+  In "Testing" mode, Google expires sign-ins after 7 days.
+- **"Connection refused"**: every cloud provider failed and Ollama isn't running. Check your API keys,
+  or start `ollama serve`.
 
-### Memory not persisting
-- Check that `./memory_db/` directory exists and is writable
-- Verify Ollama models are pulled: `ollama list` should show `llama3.2:3b` and `nomic-embed-text`
-
-### "GROQ_API_KEY not set"
-Copy `.env.example` to `.env` and fill in your key, or switch `MODEL_PROVIDER` to `ollama`
-
-### MCP Inspector not connecting
-- For stdio: `npx @modelcontextprotocol/inspector python server.py`
-- For HTTP: ensure `TRANSPORT=http` is set, then `npx @modelcontextprotocol/inspector --url http://localhost:8000/mcp`
-
-### Docker can't reach Ollama
-Add `OLLAMA_HOST=http://host.docker.internal:11434` to your `.env` when running in Docker
+Known issues are tracked in `to_fix.md`.
