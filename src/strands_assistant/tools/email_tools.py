@@ -7,7 +7,7 @@ from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 from strands import tool
 
-from logic.gmail import gmail_get_service
+from strands_assistant.logic.gmail import gmail_get_service
 
 _MAX_BODY_CHARS = 2_000
 _MAX_RESULTS_LIMIT = 20
@@ -86,5 +86,7 @@ def get_emails(query: str = "in:inbox category:primary", max_results: int = 5) -
             "Gmail authorisation has expired or was revoked. Ask the user to delete "
             "credentials/gmail_token.json and sign in again."
         )
+    except (FileNotFoundError, RuntimeError) as error:
+        return str(error)
     except HttpError as error:
         return f"Gmail API error: {error}"

@@ -8,7 +8,7 @@ from googleapiclient.errors import HttpError
 from strands import tool
 from strands_tools.utils.user_input import get_user_input
 
-from logic.gcalendar import calendar_get_service
+from strands_assistant.logic.gcalendar import calendar_get_service
 
 _MAX_RESULTS_LIMIT = 50
 _AUTH_ERROR = (
@@ -75,6 +75,8 @@ def get_events(start_date: str = "", days: int = 7, query: str = "", max_results
         return f"Invalid date: {error}. Use YYYY-MM-DD."
     except RefreshError:
         return _AUTH_ERROR
+    except (FileNotFoundError, RuntimeError) as error:
+        return str(error)
     except HttpError as error:
         return f"Google Calendar API error: {error}"
 
@@ -120,5 +122,7 @@ def create_event(summary: str, start: str, end: str, location: str = "", descrip
         return f"Invalid date: {error}. Use YYYY-MM-DDTHH:MM or YYYY-MM-DD."
     except RefreshError:
         return _AUTH_ERROR
+    except (FileNotFoundError, RuntimeError) as error:
+        return str(error)
     except HttpError as error:
         return f"Google Calendar API error: {error}"
