@@ -1,13 +1,19 @@
-import html
 import os
 import signal
 import subprocess
 
 from strands import tool
+import html
 from strands_tools.utils.user_input import get_user_input
 
-_TIMEOUT_SECONDS = int(os.getenv("TERMINAL_TIMEOUT", "60"))
 _MAX_OUTPUT_CHARS = 10_000
+
+
+def _truncate(text: str, limit: int = _MAX_OUTPUT_CHARS) -> str:
+    if len(text) <= limit:
+        return text
+    half = limit // 2
+    return f"{text[:half]}\n...[truncated]...\n{text[-half:]}"
 
 
 @tool
@@ -31,16 +37,22 @@ def terminal_exec(command: str) -> str:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         start_new_session=(os.name != "nt"),
     )
     try:
-        stdout, stderr = proc.communicate(timeout=_TIMEOUT_SECONDS)
+        timeout = int(os.getenv("TERMINAL_TIMEOUT", "60"))
+        stdout, stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         _kill_process_tree(proc)
         proc.communicate()
-        return f"Command timed out after {_TIMEOUT_SECONDS} seconds."
-    output = f"exit code: {proc.returncode}\nstdout:\n{stdout}\nstderr:\n{stderr}"
-    return output[:_MAX_OUTPUT_CHARS]
+        return f"Command timed out after {timeout} seconds."
+    return (
+        f"exit code: {proc.returncode}\n"
+        f"stdout:\n{_truncate(stdout)}\n"
+        f"stderr:\n{_truncate(stderr)}"
+    )
 
 
 def _kill_process_tree(proc: subprocess.Popen) -> None:
@@ -49,4 +61,3 @@ def _kill_process_tree(proc: subprocess.Popen) -> None:
         subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True)
     else:
         os.killpg(proc.pid, signal.SIGKILL)
-

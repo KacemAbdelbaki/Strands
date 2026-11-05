@@ -5,30 +5,24 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "strands-assistant"
 version = "0.1.0"
-description = "Personal assistant: Strands Agent wrapped in an MCP server"
+description = "A free-tier personal AI assistant built with Strands Agents"
 requires-python = ">=3.11"
 dependencies = [
-    # Agent framework — all three free model providers
-    "strands-agents[litellm,ollama,gemini]",
-    # Built-in tools (current_time, file_read, file_write, etc.)
+    "strands-agents[gemini,litellm,ollama]>=1.61",
     "strands-agents-tools",
-    # Memory — self-hosted, full config control
     "mem0ai",
     "chromadb",
-    # Web search
-    "tavily-python",
-    # Gmail + Google Calendar
     "google-api-python-client",
     "google-auth-oauthlib",
-    # Env loading
     "python-dotenv",
-    # Scraping
-    "requests",
-    "beautifulsoup4",
-    "markdownify",
-    # LinkedIn job search
-    "python-jobspy",
-    # Browser automation (Playwright fallback for JS-rendered pages)
-    "playwright",
-    "playwright-stealth",
 ]
+
+[project.optional-dependencies]
+web = []
+dev = ["pytest>=8"]
+
+[project.scripts]
+strands-assistant = "strands_assistant.agent:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

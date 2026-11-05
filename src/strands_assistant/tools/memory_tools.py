@@ -1,6 +1,6 @@
 import logging
 from strands import tool
-from logic.memory import _get_memory
+from strands_assistant.logic.memory import _get_memory
 
 logger = logging.getLogger(__name__)
 _DEFAULT_USER_ID = "default_user"

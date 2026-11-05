@@ -1,10 +1,10 @@
 import os
 import logging
-from pathlib import Path
+from strands_assistant.settings import GEMINI_MODEL_ID, MEMORY_DB_DIR
 
 logger = logging.getLogger(__name__)
 
-_MEMORY_DB_PATH = str(Path(__file__).parent / "memory_db")
+_MEMORY_DB_PATH = str(MEMORY_DB_DIR)
 
 def _get_mem0_config():
     """Build the Mem0 config based on MEMORY_PROVIDER env var."""
@@ -41,7 +41,7 @@ def _get_mem0_config():
         base_config["llm"] = {
             "provider": "gemini",
             "config": {
-                "model": "gemini-3.5-flash-lite",
+                "model": GEMINI_MODEL_ID,
                 "api_key": os.getenv("GEMINI_API_KEY"),
             },
         }

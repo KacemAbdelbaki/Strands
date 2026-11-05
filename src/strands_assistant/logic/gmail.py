@@ -1,29 +1,28 @@
-import os.path
-
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+
+from strands_assistant.settings import CREDENTIALS_DIR
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 
 def gmail_get_service():
-  """Shows basic usage of the Gmail API.
-  Lists the user's Gmail labels.
-  """
-  creds = None
-  if os.path.exists("./credentials/gmail_token.json"):
-    creds = Credentials.from_authorized_user_file("./credentials/gmail_token.json", SCOPES)
-  if not creds or not creds.valid:
-    if creds and creds.expired and creds.refresh_token:
-      creds.refresh(Request())
-    else:
-      flow = InstalledAppFlow.from_client_secrets_file(
-          "./credentials/gmail_credentials.json", SCOPES
-      )
-      creds = flow.run_local_server(port=0)
-    with open("./credentials/gmail_token.json", "w") as token:
-      token.write(creds.to_json())
+    """Return an authorised Gmail API client using an existing token."""
+    creds = None
+    token = CREDENTIALS_DIR / "gmail_token.json"
+    client_secrets = CREDENTIALS_DIR / "gmail_credentials.json"
+    if token.exists():
+        creds = Credentials.from_authorized_user_file(str(token), SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            raise RuntimeError(
+                f"Not signed in to Gmail. Run `python -m strands_assistant.google_login gmail` "
+                f"after adding {client_secrets}."
+            )
+        CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+        token.write_text(creds.to_json(), encoding="utf-8")
 
-  return build("gmail", "v1", credentials=creds)
+    return build("gmail", "v1", credentials=creds)

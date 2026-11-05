@@ -61,6 +61,7 @@ Optional settings:
 | `MEMORY_PROVIDER` | `cloud` | `cloud` (Gemini) or `ollama` (fully local) |
 | `MEM0_API_KEY` | none | Use the hosted Mem0 platform instead of local ChromaDB |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server address |
+| `STRANDS_DATA_DIR` | project directory (or `~/.strands_assistant` when installed) | Notes, credentials, and local memory location |
 | `TERMINAL_TIMEOUT` | `60` | Seconds before a terminal command is killed |
 | `BYPASS_TOOL_CONSENT` | not set | Set to `true` to skip the confirmation prompts (not recommended) |
 
@@ -76,14 +77,20 @@ Providers with no API key are skipped. Ollama is optional: to use it, run `ollam
    - `credentials/calendar_credentials.json` for Calendar
 3. If the app is in "Testing" mode, add your Google account as a test user on the OAuth consent screen.
 
-The first time a Gmail or Calendar tool runs, a browser window opens so you can sign in. The resulting
-tokens (`gmail_token.json`, `calendar_token.json`) are saved in `credentials/`. To sign in again, delete
-the token file. The `credentials/` folder is gitignored.
+Sign in before using Gmail or Calendar:
+
+```bash
+python -m strands_assistant.google_login gmail
+python -m strands_assistant.google_login calendar
+```
+
+The resulting tokens (`gmail_token.json`, `calendar_token.json`) are saved in `credentials/`. To sign in
+again, delete the token file. The `credentials/` folder is gitignored.
 
 ## Run
 
 ```bash
-python agent.py
+strands-assistant
 ```
 
 Then type your message, for example "what's on my calendar this week?" Press Ctrl+C to quit.
@@ -92,14 +99,15 @@ Then type your message, for example "what's on my calendar this week?" Press Ctr
 
 ```
 Strands/
-├── agent.py            # Builds the Assistant and Researcher agents, runs the chat loop
-├── prompts.py          # System prompts
-├── logic/
+├── src/strands_assistant/
+│   ├── agent.py        # Builds the Assistant and Researcher agents, runs the chat loop
+│   ├── prompts.py      # System prompts
+│   ├── logic/
 │   ├── models.py       # Model fallback chain (Gemini / Groq / Ollama)
 │   ├── memory.py       # Mem0 setup
 │   ├── gmail.py        # Gmail OAuth
 │   └── gcalendar.py    # Calendar OAuth
-├── tools/              # Tools the agents can call
+│   └── tools/          # Tools the agents can call
 ├── credentials/        # OAuth client files and tokens (gitignored)
 ├── notes/              # Notes
 └── memory_db/          # Local memory store (gitignored)

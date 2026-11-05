@@ -1,5 +1,7 @@
 import os
 import logging
+from urllib.error import URLError
+from urllib.request import urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,16 @@ _BUILDERS = {
 # Router factory
 # ---------------------------------------------------------------------------
 
-def _build_model(priority_env: str = "MODEL_PRIORITY", default: str = "gemini,groq,ollama"):
+def _ollama_available() -> bool:
+    host = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+    try:
+        with urlopen(f"{host}/api/tags", timeout=1):
+            return True
+    except (OSError, URLError):
+        return False
+
+
+def build_model(priority_env: str = "MODEL_PRIORITY", default: str = "gemini,groq,ollama"):
     """Build a ModelRouter with FallbackStrategy from a comma-separated priority list.
 
     Reads the priority from the `priority_env` env var (e.g. "gemini,groq,ollama"),
@@ -91,6 +102,9 @@ def _build_model(priority_env: str = "MODEL_PRIORITY", default: str = "gemini,gr
         if builder is None:
             logger.warning("Unknown model provider '%s' in %s — skipping.", name, priority_env)
             continue
+        if name == "ollama" and not _ollama_available():
+            logger.info("Skipping Ollama because %s is unavailable.", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
+            continue
         try:
             models.append(builder())
             loaded.append(name)
@@ -99,6 +113,12 @@ def _build_model(priority_env: str = "MODEL_PRIORITY", default: str = "gemini,gr
             # Missing API key — skip this provider instead of crashing
             logger.warning("Skipping provider '%s': %s", name, exc)
 
+
+    if not models:
+        raise RuntimeError(
+            f"No usable model providers for {priority_env}. Set GEMINI_API_KEY and/or "
+            "GROQ_API_KEY, or start Ollama and set OLLAMA_HOST."
+        )
 
     router = ModelRouter(
         models=models,
