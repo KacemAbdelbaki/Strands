@@ -114,5 +114,3 @@ Strands/
   In "Testing" mode, Google expires sign-ins after 7 days.
 - **"Connection refused"**: every cloud provider failed and Ollama isn't running. Check your API keys,
   or start `ollama serve`.
-
-Known issues are tracked in `to_fix.md`.

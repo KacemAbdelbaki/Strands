@@ -17,6 +17,7 @@ memory_db/
 .mem0/
 
 # Notes (user content, not tracked)
+notes/*.txt
 notes/*.md
 !notes/.gitkeep
 
