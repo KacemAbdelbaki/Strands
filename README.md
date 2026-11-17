@@ -64,6 +64,7 @@ Optional settings:
 | `STRANDS_DATA_DIR` | project directory (or `~/.strands_assistant` when installed) | Notes, credentials, and local memory location |
 | `TERMINAL_TIMEOUT` | `60` | Seconds before a terminal command is killed |
 | `BYPASS_TOOL_CONSENT` | not set | Set to `true` to skip the confirmation prompts (not recommended) |
+| `LOG_LEVEL` | `WARNING` | Logging level (`DEBUG`, `INFO`, …) |
 
 Providers with no API key are skipped. Ollama is optional: to use it, run `ollama serve` and
 `ollama pull qwen3:8b`. For local memory you also need `llama3.2:3b` and `nomic-embed-text`.
@@ -100,17 +101,24 @@ Then type your message, for example "what's on my calendar this week?" Press Ctr
 ```
 Strands/
 ├── src/strands_assistant/
-│   ├── agent.py        # Builds the Assistant and Researcher agents, runs the chat loop
-│   ├── prompts.py      # System prompts
+│   ├── agent.py            # Builds the Assistant and Researcher agents, runs the chat loop
+│   ├── prompts.py          # System prompts
+│   ├── settings.py         # Data directory and file locations
+│   ├── google_login.py     # One-time Google sign-in (gmail / calendar)
 │   ├── logic/
-│   ├── models.py       # Model fallback chain (Gemini / Groq / Ollama)
-│   ├── memory.py       # Mem0 setup
-│   ├── gmail.py        # Gmail OAuth
-│   └── gcalendar.py    # Calendar OAuth
-│   └── tools/          # Tools the agents can call
-├── credentials/        # OAuth client files and tokens (gitignored)
-├── notes/              # Notes
-└── memory_db/          # Local memory store (gitignored)
+│   │   ├── models.py       # Model fallback chain (Gemini / Groq / Ollama)
+│   │   ├── memory.py       # Mem0 setup
+│   │   ├── gmail.py        # Gmail OAuth
+│   │   └── gcalendar.py    # Calendar OAuth
+│   └── tools/              # Tools the agents can call
+│       ├── memory_tools.py
+│       ├── notes_tools.py
+│       ├── calendar_tools.py
+│       ├── email_tools.py
+│       └── system_tools.py # terminal_exec
+├── credentials/            # OAuth client files and tokens (gitignored)
+├── notes/                  # Notes
+└── memory_db/              # Local memory store (gitignored)
 ```
 
 ## Troubleshooting
