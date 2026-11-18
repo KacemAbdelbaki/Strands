@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A free-tier personal AI assistant built with Strands Agents"
 requires-python = ">=3.11"
 dependencies = [
-    "strands-agents[gemini,litellm,ollama]>=1.61",
+    "strands-agents[cedar,gemini,litellm,ollama]>=1.61",
     "strands-agents-tools>=0.8.5,<0.9",
     "mem0ai",
     "chromadb",
@@ -26,3 +26,6 @@ strands-assistant = "strands_assistant.agent:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+strands_assistant = ["policies/*.cedar"]

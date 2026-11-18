@@ -26,6 +26,7 @@ load_dotenv()
 # Import modular components
 from strands_assistant.approvals import approval_gate
 from strands_assistant.logic.models import build_model
+from strands_assistant.policies import tool_policy
 from strands_assistant.prompts import (
     CLOUD_SYSTEM_PROMPT,
     RESEARCH_TOOL_DESCRIPTION,
@@ -152,7 +153,8 @@ def create_agent(ask: Any = "stdio") -> Agent:
             max_delay=60,
         ),
         hooks=[sanitize_history],
-        interventions=[approval_gate(ask)],
+        # Order matters: the Cedar policy refuses forbidden calls before the user is ever asked
+        interventions=[tool_policy(cloud_mode=cloud), approval_gate(ask)],
     )
 
     logger.info(

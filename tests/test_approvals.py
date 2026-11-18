@@ -107,3 +107,17 @@ def test_a_new_unlisted_tool_needs_approval_by_default():
 
     assert len(ask.prompts) == 1
     assert calls == []
+
+
+def test_the_agent_refuses_destructive_commands_before_asking(scripted, tmp_path):
+    target = tmp_path / "keep-me"
+    target.mkdir()
+    scripted["MODEL_PRIORITY"] = ScriptedModel(
+        [tool_call("terminal_exec", {"command": f'rm -rf "{target}"'}), "ok"]
+    )
+    ask = RecordingAsk("n")  # declines too, so a missing policy can never delete anything
+
+    agent_module.create_agent(ask=ask)("clean up")
+
+    assert ask.prompts == []
+    assert target.exists()
