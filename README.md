@@ -58,6 +58,7 @@ Optional settings:
 |----------|---------|---------|
 | `MODEL_PRIORITY` | `gemini,groq,ollama` | Assistant model fallback order |
 | `RESEARCHER_MODEL_PRIORITY` | `groq,gemini,ollama` | Researcher model fallback order |
+| `AUX_MODEL_PRIORITY` | `ollama,groq` | Side jobs (memory extraction, summaries, action checks): the first usable provider, with no fallback. If none is usable, the Assistant's main model is used |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server address |
 | `STRANDS_DATA_DIR` | project directory (or `~/.strands_assistant` when installed) | Notes, credentials, memory and chat history location |
 | `TERMINAL_TIMEOUT` | `60` | Seconds before a terminal command is killed |

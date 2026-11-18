@@ -79,6 +79,31 @@ def _ollama_available() -> bool:
         return False
 
 
+def _load_providers(priority_env: str, default: str, *, limit: int | None = None) -> list[tuple[str, object]]:
+    """Build the providers named in `priority_env` (or `default`), in order, skipping unusable ones."""
+    priority_str = os.getenv(priority_env, default)
+    priority = [p.strip().lower() for p in priority_str.split(",") if p.strip()]
+
+    loaded = []
+    for name in priority:
+        if limit is not None and len(loaded) >= limit:
+            break
+        builder = _BUILDERS.get(name)
+        if builder is None:
+            logger.warning("Unknown model provider '%s' in %s — skipping.", name, priority_env)
+            continue
+        if name == "ollama" and not _ollama_available():
+            logger.info("Skipping Ollama because %s is unavailable.", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
+            continue
+        try:
+            loaded.append((name, builder()))
+            logger.info("Loaded model provider: %s", name)
+        except RuntimeError as exc:
+            # Missing API key — skip this provider instead of crashing
+            logger.warning("Skipping provider '%s': %s", name, exc)
+    return loaded
+
+
 def build_model(priority_env: str = "MODEL_PRIORITY", default: str = "gemini,groq,ollama"):
     """Build a ModelRouter with FallbackStrategy from a comma-separated priority list.
 
@@ -92,39 +117,32 @@ def build_model(priority_env: str = "MODEL_PRIORITY", default: str = "gemini,gro
     from strands.models.routing import ModelRouter
     from strands.models.routing.fallback_strategy import FallbackStrategy
 
-    priority_str = os.getenv(priority_env, default)
-    priority = [p.strip().lower() for p in priority_str.split(",") if p.strip()]
-
-    models = []
-    loaded = []
-    for name in priority:
-        builder = _BUILDERS.get(name)
-        if builder is None:
-            logger.warning("Unknown model provider '%s' in %s — skipping.", name, priority_env)
-            continue
-        if name == "ollama" and not _ollama_available():
-            logger.info("Skipping Ollama because %s is unavailable.", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
-            continue
-        try:
-            models.append(builder())
-            loaded.append(name)
-            logger.info("Loaded model provider: %s", name)
-        except RuntimeError as exc:
-            # Missing API key — skip this provider instead of crashing
-            logger.warning("Skipping provider '%s': %s", name, exc)
-
-
-    if not models:
+    loaded = _load_providers(priority_env, default)
+    if not loaded:
         raise RuntimeError(
             f"No usable model providers for {priority_env}. Set GEMINI_API_KEY and/or "
             "GROQ_API_KEY, or start Ollama and set OLLAMA_HOST."
         )
 
     router = ModelRouter(
-        models=models,
+        models=[model for _, model in loaded],
         strategy=FallbackStrategy(),
     )
     logger.info(
-        "ModelRouter ready — failover chain: %s", " → ".join(loaded),
+        "ModelRouter ready — failover chain: %s", " → ".join(name for name, _ in loaded),
     )
     return router
+
+
+def build_single_model(priority_env: str, default: str):
+    """The first usable provider from a priority list, as one model with no fallback, or None.
+
+    For the SDK's `aux_model`, which rejects a router. None means side calls use the main model.
+    """
+    loaded = _load_providers(priority_env, default, limit=1)
+    if not loaded:
+        logger.info("No usable provider for %s; side calls will use the main model.", priority_env)
+        return None
+    name, model = loaded[0]
+    logger.info("%s: using %s", priority_env, name)
+    return model

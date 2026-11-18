@@ -34,7 +34,7 @@ load_dotenv()
 # Import modular components
 from strands_assistant.approvals import approval_gate
 from strands_assistant.injection import ActionCheck, UntrustedContentMarkers
-from strands_assistant.logic.models import build_model
+from strands_assistant.logic.models import build_model, build_single_model
 from strands_assistant.policies import tool_policy
 from strands_assistant.prompts import (
     CLOUD_SYSTEM_PROMPT,
@@ -236,6 +236,9 @@ def create_agent(ask: Any = "stdio") -> Agent:
             max_delay=60,
         ),
         hooks=[sanitize_history],
+        # Side calls (memory extraction, summaries, action checks) go here, sparing the main model's
+        # free-tier quota. One model, no fallback: aux_model rejects a router. None means the main model.
+        aux_model=build_single_model("AUX_MODEL_PRIORITY", "ollama,groq"),
         # Before a tool that changes something runs, a model checks it follows from the user's request
         plugins=[ActionCheck()],
         # Chat history survives restarts. Only the Assistant has one: as_tool rejects a session
