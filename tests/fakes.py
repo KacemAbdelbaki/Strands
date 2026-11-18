@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from strands.models.model import Model
+from strands.types.exceptions import ContextWindowOverflowException
 
 
 def tool_call(name: str, tool_input: dict[str, Any] | None = None, tool_use_id: str | None = None) -> dict[str, Any]:
@@ -17,10 +18,13 @@ class ScriptedModel(Model):
 
     Each turn is either a string (a text reply that ends the agent loop) or a `tool_call(...)`.
     Every request it receives is kept in `requests`, so tests can check what the model was shown.
+    With `max_messages`, a request carrying more messages than that raises a context overflow, the
+    way a real provider does when the conversation no longer fits.
     """
 
-    def __init__(self, turns: list[str | dict[str, Any]] | None = None) -> None:
+    def __init__(self, turns: list[str | dict[str, Any]] | None = None, max_messages: int | None = None) -> None:
         self.turns = list(turns or [])
+        self.max_messages = max_messages
         self.requests: list[dict[str, Any]] = []
         self.config: dict[str, Any] = {"model_id": "scripted"}
 
@@ -44,6 +48,8 @@ class ScriptedModel(Model):
                 "system_prompt": system_prompt,
             }
         )
+        if self.max_messages is not None and len(messages) > self.max_messages:
+            raise ContextWindowOverflowException(f"{len(messages)} messages is over the limit of {self.max_messages}")
         turn = self.turns.pop(0) if self.turns else "done"
 
         yield {"messageStart": {"role": "assistant"}}

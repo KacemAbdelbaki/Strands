@@ -19,6 +19,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 from strands import Agent, ModelRetryStrategy
+from strands.agent.conversation_manager import SummarizingConversationManager
+from strands.session import FileSessionManager
 from strands.hooks.events import BeforeInvocationEvent
 
 load_dotenv()
@@ -41,6 +43,9 @@ from strands_assistant.tools.email_tools import get_emails
 from strands_assistant.tools.calendar_tools import get_events, create_event
 
 logger = logging.getLogger(__name__)
+
+# One user, one ongoing conversation. The web UI can pass its own ids later.
+SESSION_ID = "default"
 
 # gpt-oss reasoning warning supression
 logging.getLogger("strands.models.openai").setLevel(logging.ERROR)
@@ -151,6 +156,11 @@ def create_agent(ask: Any = "stdio") -> Agent:
             max_delay=60,
         ),
         hooks=[sanitize_history],
+        # Chat history survives restarts. Only the Assistant has one: as_tool rejects a session
+        # manager on the Researcher, which starts fresh on every call anyway.
+        session_manager=FileSessionManager(session_id=SESSION_ID, storage_dir=str(settings.AGENT_STATE_DIR / "sessions")),
+        # When the context overflows, older turns are summarized instead of dropped
+        conversation_manager=SummarizingConversationManager(),
         # Adds search_memory, add_memory and list_memories, and injects relevant memories each turn
         memory_manager=create_memory_manager(settings.AGENT_STATE_DIR),
         # Order matters: the Cedar policy refuses forbidden calls before the user is ever asked
