@@ -3,8 +3,6 @@ import signal
 import subprocess
 
 from strands import tool
-import html
-from strands_tools.utils.user_input import get_user_input
 
 _MAX_OUTPUT_CHARS = 10_000
 
@@ -18,7 +16,7 @@ def _truncate(text: str, limit: int = _MAX_OUTPUT_CHARS) -> str:
 
 @tool
 def terminal_exec(command: str) -> str:
-    """Execute a shell command on the user's machine after the user approves it.
+    """Execute a shell command on the user's machine. The approval gate asks the user first.
 
     Args:
         command: The shell command to run.
@@ -26,11 +24,6 @@ def terminal_exec(command: str) -> str:
     Returns:
         The exit code, stdout and stderr of the command, or a message if the user declined.
     """
-    if os.getenv("BYPASS_TOOL_CONSENT", "").lower() != "true":
-        # get_user_input renders the prompt as prompt_toolkit HTML, so escape the command
-        answer = get_user_input(f"Run command: {html.escape(command)} [y/N]", default="n")
-        if answer.strip().lower() not in ("y", "yes"):
-            return "The user declined to run this command."
     proc = subprocess.Popen(
         command,
         shell=True,

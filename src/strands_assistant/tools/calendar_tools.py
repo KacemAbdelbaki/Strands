@@ -1,12 +1,9 @@
-import html
-import os
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from google.auth.exceptions import RefreshError
 from googleapiclient.errors import HttpError
 from strands import tool
-from strands_tools.utils.user_input import get_user_input
 
 from strands_assistant.logic.gcalendar import calendar_get_service
 
@@ -83,7 +80,7 @@ def get_events(start_date: str = "", days: int = 7, query: str = "", max_results
 
 @tool
 def create_event(summary: str, start: str, end: str, location: str = "", description: str = "") -> str:
-    """Add an event to the user's primary Google Calendar after the user approves it.
+    """Add an event to the user's primary Google Calendar. The approval gate asks the user first.
 
     Times are in the calendar's own timezone. Use "YYYY-MM-DDTHH:MM" for a timed event,
     or "YYYY-MM-DD" for an all-day event (the end date is exclusive: a one-day event on
@@ -99,11 +96,6 @@ def create_event(summary: str, start: str, end: str, location: str = "", descrip
     Returns:
         A confirmation with the event link, or a message if the user declined or the request failed.
     """
-    if os.getenv("BYPASS_TOOL_CONSENT", "").lower() != "true":
-        # get_user_input renders the prompt as prompt_toolkit HTML, so escape the event details
-        answer = get_user_input(f"Create event: {html.escape(summary)} ({html.escape(start)} → {html.escape(end)}) [y/N]", default="n")
-        if answer.strip().lower() not in ("y", "yes"):
-            return "The user declined to create this event."
     try:
         service = calendar_get_service()
         timezone = service.calendars().get(calendarId="primary").execute()["timeZone"]

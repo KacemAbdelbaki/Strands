@@ -63,7 +63,6 @@ Optional settings:
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server address |
 | `STRANDS_DATA_DIR` | project directory (or `~/.strands_assistant` when installed) | Notes, credentials, and local memory location |
 | `TERMINAL_TIMEOUT` | `60` | Seconds before a terminal command is killed |
-| `BYPASS_TOOL_CONSENT` | not set | Set to `true` to skip the confirmation prompts (not recommended) |
 
 Providers with no API key are skipped. Ollama is optional: to use it, run `ollama serve` and
 `ollama pull qwen3:8b`. For local memory you also need `llama3.2:3b` and `nomic-embed-text`.

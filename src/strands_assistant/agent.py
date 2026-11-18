@@ -15,6 +15,8 @@ Two agents, wired with the "agents as tools" pattern:
 import logging
 import os
 from copy import deepcopy
+from typing import Any
+
 from dotenv import load_dotenv
 from strands import Agent, ModelRetryStrategy
 from strands.hooks.events import BeforeInvocationEvent
@@ -22,6 +24,7 @@ from strands.hooks.events import BeforeInvocationEvent
 load_dotenv()
 
 # Import modular components
+from strands_assistant.approvals import approval_gate
 from strands_assistant.logic.models import build_model
 from strands_assistant.prompts import (
     CLOUD_SYSTEM_PROMPT,
@@ -107,8 +110,13 @@ def create_researcher() -> Agent:
     )
 
 
-def create_agent() -> Agent:
-    """Build and return the user-facing Assistant, with the Researcher as its `research` tool."""
+def create_agent(ask: Any = "stdio") -> Agent:
+    """Build and return the user-facing Assistant, with the Researcher as its `research` tool.
+
+    Args:
+        ask: How tool approvals are collected: "stdio" prompts in the terminal, a callable answers
+            them, and None pauses the agent with an interrupt (see `approvals.approval_gate`).
+    """
     from strands_tools import current_time
 
     # MODEL_PROVIDER kept for single-model backwards compatibility
@@ -144,6 +152,7 @@ def create_agent() -> Agent:
             max_delay=60,
         ),
         hooks=[sanitize_history],
+        interventions=[approval_gate(ask)],
     )
 
     logger.info(
