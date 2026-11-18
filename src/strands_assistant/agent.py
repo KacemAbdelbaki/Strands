@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from strands import Agent, ModelRetryStrategy
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.session import FileSessionManager
+from strands.vended_plugins.context_offloader import ContextOffloader, InMemoryStorage
 from strands.vended_tools.notebook import make_notebook
 from strands.hooks.events import BeforeInvocationEvent
 
@@ -43,6 +44,11 @@ from strands_assistant.tools.email_tools import get_emails
 from strands_assistant.tools.calendar_tools import get_events, create_event
 
 logger = logging.getLogger(__name__)
+
+# Groq's free tier allows about 8,000 tokens a minute for gpt-oss-20b, and one research run makes
+# several calls, so a single tool result must stay well under that.
+RESEARCHER_MAX_RESULT_TOKENS = 1_500
+RESEARCHER_PREVIEW_TOKENS = 500
 
 # One user, one ongoing conversation. The web UI can pass its own ids later.
 SESSION_ID = "default"
@@ -113,6 +119,16 @@ def create_researcher() -> Agent:
             max_delay=60,
         ),
         hooks=[sanitize_history],
+        plugins=[
+            # Large results are the main cause of Groq's free-tier tokens-per-minute failures. Anything
+            # over the limit is replaced by a preview, and the Researcher can fetch the rest with
+            # retrieve_offloaded_content. Kept in memory, not on disk, because it holds email content.
+            ContextOffloader(
+                storage=InMemoryStorage(),
+                max_result_tokens=RESEARCHER_MAX_RESULT_TOKENS,
+                preview_tokens=RESEARCHER_PREVIEW_TOKENS,
+            )
+        ],
         callback_handler=None,
     )
 

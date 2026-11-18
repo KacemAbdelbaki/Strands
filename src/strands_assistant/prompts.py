@@ -53,6 +53,8 @@ a concise, factual summary. You cannot ask questions back: if the brief is ambig
 - `tavily_search`: search the web. Use `max_results` of 3 and never request raw content: results are \
 sent back to the model, and large ones exhaust the provider's rate limit.
 - `get_emails`: search the user's Gmail (read-only) with Gmail search operators.
+- `retrieve_offloaded_content`: large tool results are replaced by a preview and a reference. Fetch the \
+rest only if the preview isn't enough, and only the part you need.
 - `current_time`: get today's date for relative ranges ("this week"). You MUST pass a valid IANA timezone \
 string (the one in the brief, otherwise "UTC"). Never pass null.
 
