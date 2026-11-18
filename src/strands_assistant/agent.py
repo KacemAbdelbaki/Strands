@@ -12,8 +12,11 @@ Two agents, wired with the "agents as tools" pattern:
   Model chain: RESEARCHER_MODEL_PRIORITY (default groq,gemini,ollama).
 """
 
+import asyncio
 import logging
 import os
+import threading
+from collections.abc import Callable, Coroutine
 from copy import deepcopy
 from typing import Any
 
@@ -82,6 +85,65 @@ def sanitize_history(event: BeforeInvocationEvent) -> None:
 # Agent factory
 # ---------------------------------------------------------------------------
 
+class _AgentLoop:
+    """One event loop for the whole chat, running on a background thread.
+
+    Calling `agent(...)` synchronously flushes memory extraction after every turn, which costs a model
+    call per turn. On one long-lived loop, extraction keeps its every-few-turns cadence and its
+    background saves finish while the user types. `input()` stays on the main thread, so Ctrl+C works.
+    """
+
+    def __init__(self) -> None:
+        self._loop = asyncio.new_event_loop()
+        self._thread = threading.Thread(target=self._loop.run_forever, name="agent-loop", daemon=True)
+        self._thread.start()
+
+    def run(self, coroutine: Coroutine[Any, Any, Any]) -> Any:
+        future = asyncio.run_coroutine_threadsafe(coroutine, self._loop)
+        try:
+            return future.result()
+        except KeyboardInterrupt:
+            future.cancel()
+            raise
+
+    def close(self) -> None:
+        self._loop.call_soon_threadsafe(self._loop.stop)
+        self._thread.join()
+        self._loop.close()
+
+
+def run_chat(agent: Agent, read_line: Callable[[str], str] = input) -> None:
+    """The terminal chat loop. Ends on Ctrl+C or Ctrl+D, after saving any memories not yet extracted."""
+    loop = _AgentLoop()
+    try:
+        while True:
+            try:
+                user_input = read_line("You: ")
+            except (KeyboardInterrupt, EOFError):
+                print("\nGoodbye!")
+                return
+            if not user_input.strip():
+                continue
+            print("\nAssistant: ", end="", flush=True)
+            try:
+                loop.run(agent.invoke_async(user_input))
+                print("\n")
+            except KeyboardInterrupt:
+                print("\nGoodbye!")
+                return
+            except Exception as error:
+                logger.exception("Agent turn failed")
+                print(f"\nAssistant error: {error}\n")
+    finally:
+        try:
+            if agent.memory_manager is not None:
+                loop.run(agent.memory_manager.flush())
+        except Exception:
+            logger.exception("Saving memories on exit failed")
+        finally:
+            loop.close()
+
+
 def main() -> None:
     logging.basicConfig(
         level=os.getenv("LOG_LEVEL", "WARNING").upper(),
@@ -89,20 +151,7 @@ def main() -> None:
     )
     agent = create_agent()
     print("Agent ready. Type a message (Ctrl+C to quit):\n")
-    while True:
-        try:
-            user_input = input("You: ")
-            if not user_input.strip():
-                continue
-            print("\nAssistant: ", end="", flush=True)
-            agent(user_input)
-            print("\n")
-        except (KeyboardInterrupt, EOFError):
-            print("\nGoodbye!")
-            return
-        except Exception as error:
-            logger.exception("Agent turn failed")
-            print(f"\nAssistant error: {error}\n")
+    run_chat(agent)
 
 
 def create_researcher() -> Agent:
