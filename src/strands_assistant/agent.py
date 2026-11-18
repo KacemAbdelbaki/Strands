@@ -30,6 +30,7 @@ load_dotenv()
 
 # Import modular components
 from strands_assistant.approvals import approval_gate
+from strands_assistant.injection import ActionCheck, UntrustedContentMarkers
 from strands_assistant.logic.models import build_model
 from strands_assistant.policies import tool_policy
 from strands_assistant.prompts import (
@@ -139,7 +140,9 @@ def create_researcher() -> Agent:
                 storage=InMemoryStorage(),
                 max_result_tokens=RESEARCHER_MAX_RESULT_TOKENS,
                 preview_tokens=RESEARCHER_PREVIEW_TOKENS,
-            )
+            ),
+            # Wraps search, page and email results in untrusted-content markers
+            UntrustedContentMarkers(),
         ],
         callback_handler=None,
     )
@@ -184,6 +187,8 @@ def create_agent(ask: Any = "stdio") -> Agent:
             max_delay=60,
         ),
         hooks=[sanitize_history],
+        # Before a tool that changes something runs, a model checks it follows from the user's request
+        plugins=[ActionCheck()],
         # Chat history survives restarts. Only the Assistant has one: as_tool rejects a session
         # manager on the Researcher, which starts fresh on every call anyway.
         session_manager=FileSessionManager(session_id=SESSION_ID, storage_dir=str(settings.AGENT_STATE_DIR / "sessions")),
