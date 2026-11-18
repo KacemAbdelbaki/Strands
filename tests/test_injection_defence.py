@@ -107,3 +107,62 @@ def test_read_only_tools_are_not_checked(scripted):
     agent_module.create_agent(ask=RecordingAsk())("What time is it?")
 
     assert not any(request["system_prompt"] == ACTION_CHECK_PROMPT for request in model.requests)
+
+
+def test_a_large_untrusted_result_keeps_both_markers_after_offloading(scripted, monkeypatch):
+    from strands import tool
+
+    @tool
+    def get_emails(query: str = "") -> str:
+        """Fake mailbox search with one huge email."""
+        return INJECTED_EMAIL + " filler words" * 10_000
+
+    monkeypatch.setattr(agent_module, "get_emails", get_emails)
+    model = ScriptedModel([tool_call("get_emails", {"query": "in:inbox"}), research_report()])
+    scripted["RESEARCHER_MODEL_PRIORITY"] = model
+
+    agent_module.create_researcher()("check my inbox")
+
+    seen = str(model.requests[1]["messages"])
+    assert UNTRUSTED_OPEN in seen
+    assert UNTRUSTED_CLOSE in seen
+
+
+def test_retrieved_offloaded_content_is_marked_untrusted(scripted, monkeypatch):
+    from strands import tool
+
+    @tool
+    def get_emails(query: str = "") -> str:
+        """Fake mailbox search with one huge email."""
+        return INJECTED_EMAIL + " filler words" * 10_000
+
+    monkeypatch.setattr(agent_module, "get_emails", get_emails)
+
+    class RetrievesWhatWasOffloaded(ScriptedModel):
+        """Asks for the offloaded reference that the preview pointed to."""
+
+        async def stream(self, messages, tool_specs=None, system_prompt=None, **kwargs):
+            if len(self.requests) == 1:
+                import re
+
+                # The preview lists each stored block as "<reference> (text, <n> chars)"; take the biggest
+                stored = re.findall(r"(\S+) \(text, ([\d,]+) chars\)", str(messages))
+                reference = max(stored, key=lambda item: int(item[1].replace(",", "")))[0]
+                self.turns.insert(0, tool_call("retrieve_offloaded_content", {"reference": reference}, "get"))
+            async for event in super().stream(messages, tool_specs, system_prompt, **kwargs):
+                yield event
+
+    model = RetrievesWhatWasOffloaded([tool_call("get_emails", {"query": "in:inbox"}), research_report()])
+    scripted["RESEARCHER_MODEL_PRIORITY"] = model
+
+    researcher = agent_module.create_researcher()
+    researcher("check my inbox")
+
+    retrieved = [
+        block["toolResult"]
+        for message in researcher.messages
+        for block in message["content"]
+        if "toolResult" in block and block["toolResult"]["toolUseId"] == "get"
+    ]
+    assert retrieved, "the retrieval tool was not called"
+    assert UNTRUSTED_OPEN in str(retrieved[0])

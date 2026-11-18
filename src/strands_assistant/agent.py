@@ -182,6 +182,10 @@ def create_researcher() -> Agent:
         ),
         hooks=[sanitize_history],
         plugins=[
+            # Wraps search, page and email results in untrusted-content markers. Listed before the
+            # offloader on purpose: after-tool hooks run in reverse order, so the markers go around
+            # the offloader's preview instead of being cut off with the rest of the result.
+            UntrustedContentMarkers(),
             # Large results are the main cause of Groq's free-tier tokens-per-minute failures. Anything
             # over the limit is replaced by a preview, and the Researcher can fetch the rest with
             # retrieve_offloaded_content. Kept in memory, not on disk, because it holds email content.
@@ -190,8 +194,6 @@ def create_researcher() -> Agent:
                 max_result_tokens=RESEARCHER_MAX_RESULT_TOKENS,
                 preview_tokens=RESEARCHER_PREVIEW_TOKENS,
             ),
-            # Wraps search, page and email results in untrusted-content markers
-            UntrustedContentMarkers(),
         ],
         callback_handler=None,
     )
