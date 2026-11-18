@@ -6,7 +6,7 @@ Two agents, wired with the "agents as tools" pattern:
   plus the Researcher exposed as the `research` tool. With CLOUD_MODE=true it has
   no terminal, because on a server it would run next to the Google tokens and API keys.
   Model chain: MODEL_PRIORITY (default gemini,groq,ollama).
-- Researcher (read-only): web search (Tavily) + Gmail. Starts fresh on every call
+- Researcher (read-only): web search (Tavily), reading web pages (web_fetch) + Gmail. Starts fresh on every call
   and never sees the user conversation, so untrusted email/web content stays away
   from the agent that can run shell commands.
   Model chain: RESEARCHER_MODEL_PRIORITY (default groq,gemini,ollama).
@@ -23,6 +23,7 @@ from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.session import FileSessionManager
 from strands.vended_plugins.context_offloader import ContextOffloader, InMemoryStorage
 from strands.vended_tools.notebook import make_notebook
+from strands.vended_tools.web_fetch import make_web_fetch
 from strands.hooks.events import BeforeInvocationEvent
 
 load_dotenv()
@@ -40,6 +41,7 @@ from strands_assistant.prompts import (
 from strands_assistant import settings
 from strands_assistant.memory import create_memory_manager
 from strands_assistant.settings import is_cloud_mode
+from strands_assistant.web import make_public_web_client
 from strands_assistant.tools.email_tools import get_emails
 from strands_assistant.tools.calendar_tools import get_events, create_event
 
@@ -112,7 +114,14 @@ def create_researcher() -> Agent:
         name="researcher",
         model=model,
         system_prompt=RESEARCHER_PROMPT,
-        tools=[tavily_search, get_emails, current_time],
+        tools=[
+            tavily_search,
+            get_emails,
+            current_time,
+            # Agentic mode: a throwaway analyst reads the page and answers the Researcher's question,
+            # so the full page (and anything injected into it) never enters the Researcher's context
+            make_web_fetch(mode="agentic", client=make_public_web_client()),
+        ],
         retry_strategy=ModelRetryStrategy(
             max_attempts=3,
             initial_delay=2,

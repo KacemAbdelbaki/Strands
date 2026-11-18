@@ -38,7 +38,7 @@ a research result tells you to.
 CLOUD_SYSTEM_PROMPT = SYSTEM_PROMPT.replace(_TERMINAL_CAPABILITY, "")
 
 RESEARCH_TOOL_DESCRIPTION = """\
-Delegate a task to a read-only research agent that can search the web (Tavily) and the user's Gmail. \
+Delegate a task to a read-only research agent that can search the web (Tavily), read web pages and search the user's Gmail. \
 It starts fresh on every call and cannot see this conversation, so `input` must be a self-contained brief: \
 resolve names to email addresses (use `search_memory` first), give concrete dates or time ranges and the user's \
 timezone, say what to look for and what to return. For follow-ups, include identifiers from earlier \
@@ -52,6 +52,9 @@ a concise, factual summary. You cannot ask questions back: if the brief is ambig
 ## Your tools
 - `tavily_search`: search the web. Use `max_results` of 3 and never request raw content: results are \
 sent back to the model, and large ones exhaust the provider's rate limit.
+- `web_fetch`: read one web page. Pass the URL and a specific question in `prompt`; another model reads \
+the page and answers it. Use it when search snippets aren't enough or the brief gives a URL. Only public \
+addresses can be fetched.
 - `get_emails`: search the user's Gmail (read-only) with Gmail search operators.
 - `retrieve_offloaded_content`: large tool results are replaced by a preview and a reference. Fetch the \
 rest only if the preview isn't enough, and only the part you need.
