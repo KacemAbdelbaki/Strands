@@ -73,3 +73,8 @@ def tool_results(messages) -> list[str]:
                 parts = block["toolResult"]["content"]
                 results.append(" ".join(part.get("text", "") or json.dumps(part.get("json", "")) for part in parts))
     return results
+
+
+def research_report(summary: str = "done", tool_use_id: str = "report") -> dict[str, Any]:
+    """The Researcher's final turn: the structured ResearchReport it must end with."""
+    return tool_call("ResearchReport", {"summary": summary}, tool_use_id=tool_use_id)

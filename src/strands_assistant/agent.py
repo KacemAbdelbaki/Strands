@@ -40,6 +40,7 @@ from strands_assistant.prompts import (
 )
 from strands_assistant import settings
 from strands_assistant.memory import create_memory_manager
+from strands_assistant.research import ResearchReport
 from strands_assistant.settings import is_cloud_mode
 from strands_assistant.web import make_public_web_client
 from strands_assistant.tools.email_tools import get_emails
@@ -114,6 +115,8 @@ def create_researcher() -> Agent:
         name="researcher",
         model=model,
         system_prompt=RESEARCHER_PROMPT,
+        # Ends every run with a validated report; as_tool returns it to the Assistant as JSON
+        structured_output_model=ResearchReport,
         tools=[
             tavily_search,
             get_emails,

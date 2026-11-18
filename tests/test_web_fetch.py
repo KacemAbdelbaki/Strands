@@ -5,7 +5,7 @@ import asyncio
 import httpx
 import pytest
 
-from fakes import ScriptedModel, tool_call, tool_results
+from fakes import ScriptedModel, research_report, tool_call, tool_results
 from strands_assistant import agent as agent_module
 from strands_assistant.web import PublicOnlyTransport, make_public_web_client
 
@@ -127,7 +127,7 @@ def test_the_researcher_can_summarize_a_page(scripted, monkeypatch):
         [
             tool_call("web_fetch", {"url": "https://public.example/page", "prompt": "What does it say?"}),
             "The page says hello.",  # the analyst's answer
-            "Summary: the page says hello. Source: https://public.example/page",
+            research_report("The page says hello."),
         ]
     )
     scripted["RESEARCHER_MODEL_PRIORITY"] = model
@@ -137,15 +137,15 @@ def test_the_researcher_can_summarize_a_page(scripted, monkeypatch):
 
     assert recorder.urls == ["https://public.example/page"]
     assert "The page says hello." in str(model.requests[1]["messages"])  # the analyst saw the page
-    assert "The page says hello." in tool_results(researcher.messages)[-1]
+    assert any("The page says hello." in result for result in tool_results(researcher.messages))
 
 
 def test_the_researcher_refuses_to_fetch_localhost(scripted):
     scripted["RESEARCHER_MODEL_PRIORITY"] = ScriptedModel(
-        [tool_call("web_fetch", {"url": "http://localhost:11434/api/tags", "prompt": "list models"}), "ok"]
+        [tool_call("web_fetch", {"url": "http://localhost:11434/api/tags", "prompt": "list models"}), research_report()]
     )
 
     researcher = agent_module.create_researcher()
     researcher("what models are on localhost?")
 
-    assert "private" in tool_results(researcher.messages)[-1]
+    assert "private" in tool_results(researcher.messages)[0]

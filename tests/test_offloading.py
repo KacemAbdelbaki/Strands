@@ -3,7 +3,7 @@
 import pytest
 from strands import tool
 
-from fakes import ScriptedModel, tool_call
+from fakes import ScriptedModel, research_report, tool_call
 from strands_assistant import agent as agent_module
 
 BIG_RESULT = "email body line with lots of words. " * 2_000  # roughly 18k tokens
@@ -38,7 +38,7 @@ def _tool_result_sizes(request) -> list[int]:
 
 
 def test_a_huge_result_reaches_the_researcher_model_as_a_short_preview(scripted):
-    model = ScriptedModel([tool_call("get_emails", {"query": "in:inbox"}), "summary"])
+    model = ScriptedModel([tool_call("get_emails", {"query": "in:inbox"}), research_report()])
     scripted["RESEARCHER_MODEL_PRIORITY"] = model
 
     agent_module.create_researcher()("summarize my inbox")
@@ -51,9 +51,9 @@ def test_offloading_still_works_on_the_second_research_call(scripted):
     researcher_model = ScriptedModel(
         [
             tool_call("get_emails", {"query": "a"}, tool_use_id="r1"),
-            "first summary",
+            research_report("first summary"),
             tool_call("get_emails", {"query": "b"}, tool_use_id="r2"),
-            "second summary",
+            research_report("second summary"),
         ]
     )
     scripted["RESEARCHER_MODEL_PRIORITY"] = researcher_model
