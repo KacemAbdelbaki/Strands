@@ -7,7 +7,7 @@ It runs on free-tier models (Gemini, Groq) with a local Ollama fallback.
 
 | Area | Tools |
 |------|-------|
-| Memory | `remember`, `recall`, `list_memories` (Mem0 + ChromaDB) |
+| Memory | `search_memory`, `add_memory`, `list_memories` (Strands `MemoryManager` with Markdown files), relevant memories injected each turn |
 | Notes | `take_note`, `get_notes` (saved to `notes/note.txt`) |
 | Google Calendar | `get_events`, `create_event` |
 | Terminal | `terminal_exec` (runs shell commands on your machine) |
@@ -58,14 +58,12 @@ Optional settings:
 |----------|---------|---------|
 | `MODEL_PRIORITY` | `gemini,groq,ollama` | Assistant model fallback order |
 | `RESEARCHER_MODEL_PRIORITY` | `groq,gemini,ollama` | Researcher model fallback order |
-| `MEMORY_PROVIDER` | `cloud` | `cloud` (Gemini) or `ollama` (fully local) |
-| `MEM0_API_KEY` | none | Use the hosted Mem0 platform instead of local ChromaDB |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server address |
-| `STRANDS_DATA_DIR` | project directory (or `~/.strands_assistant` when installed) | Notes, credentials, and local memory location |
+| `STRANDS_DATA_DIR` | project directory (or `~/.strands_assistant` when installed) | Notes, credentials, memory and chat history location |
 | `TERMINAL_TIMEOUT` | `60` | Seconds before a terminal command is killed |
 
 Providers with no API key are skipped. Ollama is optional: to use it, run `ollama serve` and
-`ollama pull qwen3:8b`. For local memory you also need `llama3.2:3b` and `nomic-embed-text`.
+`ollama pull qwen3:8b`.
 
 ### 3. Google sign-in (Gmail and Calendar)
 
@@ -99,17 +97,21 @@ Then type your message, for example "what's on my calendar this week?" Press Ctr
 ```
 Strands/
 ├── src/strands_assistant/
-│   ├── agent.py        # Builds the Assistant and Researcher agents, runs the chat loop
-│   ├── prompts.py      # System prompts
+│   ├── agent.py            # Builds the Assistant and Researcher agents, runs the chat loop
+│   ├── prompts.py          # System prompts
+│   ├── approvals.py        # Which tools run without asking (HumanInTheLoop)
+│   ├── policies/           # Cedar rules that refuse dangerous tool calls outright
+│   ├── memory.py           # Long-term memory (MemoryManager + Markdown files)
+│   ├── migrate_memory.py   # One-time import of old Mem0 memories
 │   ├── logic/
-│   ├── models.py       # Model fallback chain (Gemini / Groq / Ollama)
-│   ├── memory.py       # Mem0 setup
-│   ├── gmail.py        # Gmail OAuth
-│   └── gcalendar.py    # Calendar OAuth
-│   └── tools/          # Tools the agents can call
-├── credentials/        # OAuth client files and tokens (gitignored)
-├── notes/              # Notes
-└── memory_db/          # Local memory store (gitignored)
+│   │   ├── models.py       # Model fallback chain (Gemini / Groq / Ollama)
+│   │   ├── gmail.py        # Gmail OAuth
+│   │   └── gcalendar.py    # Calendar OAuth
+│   └── tools/              # Tools the agents can call
+├── tests/                  # Offline tests (a scripted model, no API calls)
+├── credentials/            # OAuth client files and tokens (gitignored)
+├── notes/                  # Notes
+└── agent_state/            # Memory and chat history (gitignored)
 ```
 
 ## Troubleshooting

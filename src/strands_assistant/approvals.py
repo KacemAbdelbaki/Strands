@@ -14,8 +14,8 @@ from strands.vended_interventions.hitl import HumanInTheLoop
 ALLOWED_TOOLS = [
     "current_time",
     "research",
-    "remember",
-    "recall",
+    "search_memory",
+    "add_memory",
     "list_memories",
     "take_note",
     "get_notes",

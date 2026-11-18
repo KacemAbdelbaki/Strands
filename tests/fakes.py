@@ -56,3 +56,14 @@ class ScriptedModel(Model):
             yield {"contentBlockDelta": {"delta": {"toolUse": {"input": json.dumps(turn["input"])}}}}
             yield {"contentBlockStop": {}}
             yield {"messageStop": {"stopReason": "tool_use"}}
+
+
+def tool_results(messages) -> list[str]:
+    """The text of every tool result in a conversation, in order."""
+    results = []
+    for message in messages:
+        for block in message["content"]:
+            if "toolResult" in block:
+                parts = block["toolResult"]["content"]
+                results.append(" ".join(part.get("text", "") or json.dumps(part.get("json", "")) for part in parts))
+    return results

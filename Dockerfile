@@ -34,11 +34,8 @@ COPY --from=deps /deps /deps
 
 # All state lives in /data, which Compose mounts from the host
 ENV STRANDS_DATA_DIR=/data \
-    MEM0_DIR=/data/.mem0 \
     HOME=/data \
-    CLOUD_MODE=true \
-    ANONYMIZED_TELEMETRY=False \
-    MEM0_TELEMETRY=False
+    CLOUD_MODE=true
 
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
     && mkdir /data \

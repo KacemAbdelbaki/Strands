@@ -16,6 +16,9 @@ memory_db/
 # Mem0 default cache
 .mem0/
 
+# Agent memory and chat history (personal data)
+agent_state/
+
 # Notes (user content, not tracked)
 notes/*.txt
 notes/*.md

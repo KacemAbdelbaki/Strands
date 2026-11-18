@@ -2,7 +2,7 @@
 Strands Personal Assistant — Agent Factory
 
 Two agents, wired with the "agents as tools" pattern:
-- Assistant (user-facing orchestrator): memory, notes, calendar, terminal, time,
+- Assistant (user-facing orchestrator): long-term memory (MemoryManager), notes, calendar, terminal, time,
   plus the Researcher exposed as the `research` tool. With CLOUD_MODE=true it has
   no terminal, because on a server it would run next to the Google tokens and API keys.
   Model chain: MODEL_PRIORITY (default gemini,groq,ollama).
@@ -33,8 +33,9 @@ from strands_assistant.prompts import (
     RESEARCHER_PROMPT,
     SYSTEM_PROMPT,
 )
+from strands_assistant import settings
+from strands_assistant.memory import create_memory_manager
 from strands_assistant.settings import is_cloud_mode
-from strands_assistant.tools.memory_tools import remember, recall, list_memories
 from strands_assistant.tools.notes_tools import take_note, get_notes
 from strands_assistant.tools.email_tools import get_emails
 from strands_assistant.tools.calendar_tools import get_events, create_event
@@ -129,9 +130,6 @@ def create_agent(ask: Any = "stdio") -> Agent:
     tools = [
         current_time,
         research,
-        remember,
-        recall,
-        list_memories,
         take_note,
         get_notes,
         get_events,
@@ -153,6 +151,8 @@ def create_agent(ask: Any = "stdio") -> Agent:
             max_delay=60,
         ),
         hooks=[sanitize_history],
+        # Adds search_memory, add_memory and list_memories, and injects relevant memories each turn
+        memory_manager=create_memory_manager(settings.AGENT_STATE_DIR),
         # Order matters: the Cedar policy refuses forbidden calls before the user is ever asked
         interventions=[tool_policy(cloud_mode=cloud), approval_gate(ask)],
     )

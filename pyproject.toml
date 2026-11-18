@@ -10,8 +10,6 @@ requires-python = ">=3.11"
 dependencies = [
     "strands-agents[cedar,gemini,litellm,ollama]>=1.61",
     "strands-agents-tools>=0.8.5,<0.9",
-    "mem0ai",
-    "chromadb",
     "google-api-python-client",
     "google-auth-oauthlib",
     "python-dotenv",
