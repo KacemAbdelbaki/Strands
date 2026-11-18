@@ -11,7 +11,6 @@ _DEFAULT_DATA_DIR = (
 )
 DATA_DIR = Path(os.getenv("STRANDS_DATA_DIR", str(_DEFAULT_DATA_DIR))).expanduser()
 CREDENTIALS_DIR = DATA_DIR / "credentials"
-NOTES_DIR = DATA_DIR / "notes"
 MEMORY_DB_DIR = DATA_DIR / "memory_db"  # old Mem0/Chroma store, read once by migrate_memory
 # Everything the agents keep between runs: memory and chat history. Contains personal data.
 AGENT_STATE_DIR = DATA_DIR / "agent_state"

@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from strands import Agent, ModelRetryStrategy
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.session import FileSessionManager
+from strands.vended_tools.notebook import make_notebook
 from strands.hooks.events import BeforeInvocationEvent
 
 load_dotenv()
@@ -38,7 +39,6 @@ from strands_assistant.prompts import (
 from strands_assistant import settings
 from strands_assistant.memory import create_memory_manager
 from strands_assistant.settings import is_cloud_mode
-from strands_assistant.tools.notes_tools import take_note, get_notes
 from strands_assistant.tools.email_tools import get_emails
 from strands_assistant.tools.calendar_tools import get_events, create_event
 
@@ -135,8 +135,8 @@ def create_agent(ask: Any = "stdio") -> Agent:
     tools = [
         current_time,
         research,
-        take_note,
-        get_notes,
+        # Notes live in agent.state, so the session manager below is what keeps them
+        make_notebook(),
         get_events,
         create_event,
     ]

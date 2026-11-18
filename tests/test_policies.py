@@ -106,14 +106,14 @@ def test_other_tools_are_not_affected():
     calls = []
 
     @tool
-    def get_notes() -> str:
-        """Read notes."""
+    def get_events() -> str:
+        """An allow-listed read-only tool."""
         calls.append(1)
-        return "notes"
+        return "events"
 
     agent = Agent(
-        model=ScriptedModel([tool_call("get_notes"), "ok"]),
-        tools=[get_notes],
+        model=ScriptedModel([tool_call("get_events"), "ok"]),
+        tools=[get_events],
         interventions=[tool_policy(cloud_mode=True), approval_gate(RecordingAsk())],
         callback_handler=None,
     )

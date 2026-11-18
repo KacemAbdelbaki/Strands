@@ -8,7 +8,7 @@ It runs on free-tier models (Gemini, Groq) with a local Ollama fallback.
 | Area | Tools |
 |------|-------|
 | Memory | `search_memory`, `add_memory`, `list_memories` (Strands `MemoryManager` with Markdown files), relevant memories injected each turn |
-| Notes | `take_note`, `get_notes` (saved to `notes/note.txt`) |
+| Notes | `notebook` (Strands built-in, kept with the chat session) |
 | Google Calendar | `get_events`, `create_event` |
 | Terminal | `terminal_exec` (runs shell commands on your machine) |
 | Research | `research`: a separate agent with web search (Tavily) and read-only Gmail |
@@ -110,7 +110,6 @@ Strands/
 │   └── tools/              # Tools the agents can call
 ├── tests/                  # Offline tests (a scripted model, no API calls)
 ├── credentials/            # OAuth client files and tokens (gitignored)
-├── notes/                  # Notes
 └── agent_state/            # Memory and chat history (gitignored)
 ```
 

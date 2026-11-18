@@ -17,8 +17,7 @@ ALLOWED_TOOLS = [
     "search_memory",
     "add_memory",
     "list_memories",
-    "take_note",
-    "get_notes",
+    "notebook",
     "get_events",
 ]
 

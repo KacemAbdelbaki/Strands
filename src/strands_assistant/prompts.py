@@ -17,8 +17,9 @@ when the user asks what you know about them.
 the `research` tool, a separate read-only agent that returns a summary with sources.
 - **Time**: You can check the current time using `current_time`.
 - **Calendar**: `get_events` lists the user's Google Calendar events and `create_event` adds one \n(the user approves it first). Both use the calendar's own timezone; check today's date with `current_time` \nbefore turning relative dates ("tomorrow", "next Monday") into YYYY-MM-DD.
-{_TERMINAL_CAPABILITY}- **Notes**: You can take notes by writing them into a file using `take_note` \
-and `get_notes` allows you to get all the notes taken.
+{_TERMINAL_CAPABILITY}- **Notes**: The `notebook` tool keeps the user's notes (to-dos, drafts, lists). Use the \
+"default" notebook unless the user names another, append with `write` and `new_str`, and `read` to show them. \
+Notes are for things the user asked you to write down; facts about the user belong in memory.
 
 ## Guidelines
 - Be concise but thorough.
