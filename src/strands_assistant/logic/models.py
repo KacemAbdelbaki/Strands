@@ -1,9 +1,41 @@
+import base64
 import os
 import logging
+from copy import deepcopy
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from strands.models.gemini import GeminiModel
+
 logger = logging.getLogger(__name__)
+
+# Google's documented placeholder for function calls Gemini didn't make itself (the same value LiteLLM uses):
+# https://ai.google.dev/gemini-api/docs/thought-signatures#faqs
+PLACEHOLDER_THOUGHT_SIGNATURE = base64.b64encode(b"skip_thought_signature_validator").decode("ascii")
+
+
+class SignatureSafeGeminiModel(GeminiModel):
+    """Gemini that accepts tool calls made earlier in the run by another provider.
+
+    The router switches provider mid-run, after a failed model call (e.g. Groq hits its rate limit right after
+    calling get_emails). Gemini 3 rejects history whose function calls have no thought_signature
+    (`400 missing thought_signature`), so each unsigned call gets the placeholder. Only the copy sent to Gemini
+    changes: the agent's history stays clean for the next provider.
+    """
+
+    @staticmethod
+    def with_placeholder_signatures(messages):
+        patched = deepcopy(messages)
+        for message in patched:
+            for block in message.get("content", []):
+                tool_use = block.get("toolUse")
+                if tool_use is not None and not tool_use.get("reasoningSignature"):
+                    tool_use["reasoningSignature"] = PLACEHOLDER_THOUGHT_SIGNATURE
+        return patched
+
+    async def stream(self, messages, *args, **kwargs):
+        async for event in super().stream(self.with_placeholder_signatures(messages), *args, **kwargs):
+            yield event
 
 
 
@@ -33,15 +65,13 @@ def _build_groq():
 
 def _build_gemini():
     """Build a Gemini model."""
-    from strands.models.gemini import GeminiModel
-
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError(
             "GEMINI_API_KEY is not set. "
             "Get a free key at https://aistudio.google.com"
         )
-    return GeminiModel(
+    return SignatureSafeGeminiModel(
         model_id="gemini-3.1-flash-lite",
         client_args={"api_key": api_key},
     )
