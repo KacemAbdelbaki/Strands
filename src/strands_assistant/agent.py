@@ -3,7 +3,8 @@ Strands Personal Assistant — Agent Factory
 
 Two agents, wired with the "agents as tools" pattern:
 - Assistant (user-facing orchestrator): memory, notes, calendar, terminal, time,
-  plus the Researcher exposed as the `research` tool.
+  plus the Researcher exposed as the `research` tool. With CLOUD_MODE=true it has
+  no terminal, because on a server it would run next to the Google tokens and API keys.
   Model chain: MODEL_PRIORITY (default gemini,groq,ollama).
 - Researcher (read-only): web search (Tavily) + Gmail. Starts fresh on every call
   and never sees the user conversation, so untrusted email/web content stays away
@@ -22,10 +23,15 @@ load_dotenv()
 
 # Import modular components
 from strands_assistant.logic.models import build_model
-from strands_assistant.prompts import RESEARCH_TOOL_DESCRIPTION, RESEARCHER_PROMPT, SYSTEM_PROMPT
+from strands_assistant.prompts import (
+    CLOUD_SYSTEM_PROMPT,
+    RESEARCH_TOOL_DESCRIPTION,
+    RESEARCHER_PROMPT,
+    SYSTEM_PROMPT,
+)
+from strands_assistant.settings import is_cloud_mode
 from strands_assistant.tools.memory_tools import remember, recall, list_memories
 from strands_assistant.tools.notes_tools import take_note, get_notes
-from strands_assistant.tools.system_tools import terminal_exec
 from strands_assistant.tools.email_tools import get_emails
 from strands_assistant.tools.calendar_tools import get_events, create_event
 
@@ -111,21 +117,27 @@ def create_agent() -> Agent:
     # preserve_context=False (the default) resets the Researcher before every call
     research = create_researcher().as_tool(name="research", description=RESEARCH_TOOL_DESCRIPTION)
 
+    tools = [
+        current_time,
+        research,
+        remember,
+        recall,
+        list_memories,
+        take_note,
+        get_notes,
+        get_events,
+        create_event,
+    ]
+    cloud = is_cloud_mode()
+    if not cloud:
+        from strands_assistant.tools.system_tools import terminal_exec
+
+        tools.append(terminal_exec)
+
     agent = Agent(
         model=model,
-        system_prompt=SYSTEM_PROMPT,
-        tools=[
-            current_time,
-            research,
-            remember,
-            recall,
-            list_memories,
-            take_note,
-            get_notes,
-            get_events,
-            create_event,
-            terminal_exec,
-        ],
+        system_prompt=CLOUD_SYSTEM_PROMPT if cloud else SYSTEM_PROMPT,
+        tools=tools,
         retry_strategy=ModelRetryStrategy(
             max_attempts=3,
             initial_delay=2,

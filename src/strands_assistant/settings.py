@@ -14,3 +14,8 @@ CREDENTIALS_DIR = DATA_DIR / "credentials"
 NOTES_DIR = DATA_DIR / "notes"
 MEMORY_DB_DIR = DATA_DIR / "memory_db"
 GEMINI_MODEL_ID = "gemini-3.1-flash-lite"
+
+
+def is_cloud_mode() -> bool:
+    """True on the server, where the agent must not have a shell next to its tokens and keys."""
+    return os.getenv("CLOUD_MODE", "").strip().lower() == "true"
