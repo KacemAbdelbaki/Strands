@@ -1,0 +1,16 @@
+services:
+  assistant:
+    build: .
+    image: strands-assistant:latest
+    container_name: strands-assistant
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    # The agent is a terminal app: it waits for input here and you join it with `docker attach`
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

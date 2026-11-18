@@ -1,0 +1,9 @@
+# Allow only what the image needs, so secrets and user data can never be copied in
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!constraints.txt
+!src/
+**/__pycache__/
+**/*.egg-info/

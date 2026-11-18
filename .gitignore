@@ -36,3 +36,6 @@ Thumbs.db
 
 # To Fix
 to_fix.md
+
+# Container data (Google tokens, memory, notes)
+data/

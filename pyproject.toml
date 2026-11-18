@@ -9,7 +9,7 @@ description = "A free-tier personal AI assistant built with Strands Agents"
 requires-python = ">=3.11"
 dependencies = [
     "strands-agents[gemini,litellm,ollama]>=1.61",
-    "strands-agents-tools",
+    "strands-agents-tools>=0.8.5,<0.9",
     "mem0ai",
     "chromadb",
     "google-api-python-client",
