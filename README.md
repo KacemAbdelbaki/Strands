@@ -11,10 +11,24 @@ It runs on free-tier models (Gemini, Groq) with a local Ollama fallback.
 | Notes | `notebook` (Strands built-in, kept with the chat session) |
 | Google Calendar | `get_events`, `create_event` |
 | Terminal | `terminal_exec` (runs shell commands on your machine) |
-| Research | `research`: a separate agent with web search (Tavily) and read-only Gmail |
+| Research | `research`: a separate agent with web search (Tavily), web page reading and read-only Gmail, returning a typed report |
 | Time | `current_time` |
 
-`create_event` and `terminal_exec` ask for confirmation (`[y/N]`) before they run.
+## Safety layers
+
+Each tool call goes through these, in order:
+
+1. **Action check**: for tools that change something, a model checks the call follows from your latest
+   request, and cancels it with an explanation if it doesn't. Read-only tools skip it.
+2. **Cedar policy** (`policies/tools.cedar`): refuses recursive deletes, disk formatting, registry deletes
+   and shutdowns outright, and the shell entirely in cloud mode. Matching command text can be bypassed, so
+   this is one layer, not containment.
+3. **Approval** (Strands `HumanInTheLoop`): every tool asks `(y/n)` first unless it is on the read-only
+   allow-list in `approvals.py`, so a newly added tool is protected by default.
+
+Content from email and web pages reaches the Researcher between untrusted-content markers, web pages can only
+be fetched from public addresses, and the Researcher must return a report where every finding cites a source.
+These reduce prompt-injection risk; they don't remove it.
 
 ## How it works
 
@@ -24,11 +38,11 @@ You (terminal)
   ▼
 Assistant agent    memory, notes, calendar, terminal, time
   │
-  └── research ──► Researcher agent    web search, Gmail (read-only)
+  └── research ──► Researcher agent    web search, web pages, Gmail (read-only)
 ```
 
 The Researcher starts fresh on every call and never sees your conversation. Email and web content stay
-with an agent that cannot run commands; the Assistant only gets the Researcher's summary.
+with an agent that cannot run commands; the Assistant only gets the Researcher's typed report.
 
 Each agent has a model fallback chain: if one provider fails or hits a rate limit, the next one takes over.
 
